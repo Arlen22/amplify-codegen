@@ -1,15 +1,34 @@
-import { DEFAULT_SCALARS, NormalizedScalarsMap } from "@graphql-codegen/visitor-plugin-common";
-import { GraphQLSchema } from "graphql";
-import { AssociationType, Field, Fields, FieldType, ModelAttribute, ModelIntrospectionSchema, PrimaryKeyInfo, SchemaEnum, SchemaModel, SchemaNonModel } from "../interfaces/introspection";
-import { METADATA_SCALAR_MAP } from "../scalars";
-import { CodeGenConnectionType } from "../utils/process-connections";
-import { RawAppSyncModelConfig, ParsedAppSyncModelConfig, AppSyncModelVisitor, CodeGenEnum, CodeGenField, CodeGenModel, CodeGenPrimaryKeyType } from "./appsync-visitor";
+import { DEFAULT_SCALARS, NormalizedScalarsMap } from '@graphql-codegen/visitor-plugin-common';
+import { GraphQLSchema } from 'graphql';
+import {
+  AssociationType,
+  Field,
+  Fields,
+  FieldType,
+  ModelAttribute,
+  ModelIntrospectionSchema,
+  PrimaryKeyInfo,
+  SchemaEnum,
+  SchemaModel,
+  SchemaNonModel,
+} from '../interfaces/introspection';
+import { METADATA_SCALAR_MAP } from '../scalars';
+import { CodeGenConnectionType } from '../utils/process-connections';
+import {
+  RawAppSyncModelConfig,
+  ParsedAppSyncModelConfig,
+  AppSyncModelVisitor,
+  CodeGenEnum,
+  CodeGenField,
+  CodeGenModel,
+  CodeGenPrimaryKeyType,
+} from './appsync-visitor';
 import fs from 'fs';
 import path from 'path';
 import Ajv from 'ajv';
 
-export interface RawAppSyncModelIntrospectionConfig extends RawAppSyncModelConfig {};
-export interface ParsedAppSyncModelIntrospectionConfig extends ParsedAppSyncModelConfig {};
+export interface RawAppSyncModelIntrospectionConfig extends RawAppSyncModelConfig {}
+export interface ParsedAppSyncModelIntrospectionConfig extends ParsedAppSyncModelConfig {}
 export class AppSyncModelIntrospectionVisitor<
   TRawConfig extends RawAppSyncModelIntrospectionConfig = RawAppSyncModelIntrospectionConfig,
   TPluginConfig extends ParsedAppSyncModelIntrospectionConfig = ParsedAppSyncModelIntrospectionConfig
@@ -23,7 +42,10 @@ export class AppSyncModelIntrospectionVisitor<
     defaultScalars: NormalizedScalarsMap = DEFAULT_SCALARS,
   ) {
     super(schema, rawConfig, additionalConfig, defaultScalars);
-    const modelIntrospectionSchemaText = fs.readFileSync(path.join(__dirname, '..', '..', 'schemas', 'introspection', this.introspectionVersion.toString(), 'ModelIntrospectionSchema.json'), 'utf8');
+    const modelIntrospectionSchemaText = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'schemas', 'introspection', this.introspectionVersion.toString(), 'ModelIntrospectionSchema.json'),
+      'utf8',
+    );
     const modelIntrospectionSchema = JSON.parse(modelIntrospectionSchemaText);
     this.schemaValidator = new Ajv().compile(modelIntrospectionSchema);
   }
@@ -31,14 +53,13 @@ export class AppSyncModelIntrospectionVisitor<
     const shouldUseModelNameFieldInHasManyAndBelongsTo = false;
     // This flag is going to be used to tight-trigger on JS implementations only.
     const shouldImputeKeyForUniDirectionalHasMany = true;
-    this.processDirectives(
-      shouldUseModelNameFieldInHasManyAndBelongsTo,
-      shouldImputeKeyForUniDirectionalHasMany
-    );
+    this.processDirectives(shouldUseModelNameFieldInHasManyAndBelongsTo, shouldImputeKeyForUniDirectionalHasMany);
 
     const modelIntrosepctionSchema = this.generateModelIntrospectionSchema();
     if (!this.schemaValidator(modelIntrosepctionSchema)) {
-      throw new Error(`Data did not validate against the supplied schema. Underlying errors were ${JSON.stringify(this.schemaValidator.errors)}`);
+      throw new Error(
+        `Data did not validate against the supplied schema. Underlying errors were ${JSON.stringify(this.schemaValidator.errors)}`,
+      );
     }
     return JSON.stringify(modelIntrosepctionSchema, null, 4);
   }
@@ -70,8 +91,8 @@ export class AppSyncModelIntrospectionVisitor<
       if (connectionInfo.kind === CodeGenConnectionType.HAS_MANY) {
         connectionAttribute.associatedWith = connectionInfo.associatedWithFields.map(f => this.getFieldName(f));
       } else if (connectionInfo.kind === CodeGenConnectionType.HAS_ONE) {
-          connectionAttribute.associatedWith = connectionInfo.associatedWithFields.map(f => this.getFieldName(f));
-          connectionAttribute.targetNames = connectionInfo.targetNames;
+        connectionAttribute.associatedWith = connectionInfo.associatedWithFields.map(f => this.getFieldName(f));
+        connectionAttribute.targetNames = connectionInfo.targetNames;
       } else {
         connectionAttribute.targetNames = connectionInfo.targetNames;
       }
@@ -104,7 +125,10 @@ export class AppSyncModelIntrospectionVisitor<
           isArray: field.isList,
           type: this.getType(field.type),
           isRequired: !field.isNullable,
-          attributes: [],
+          attributes: field.directives.map(d => ({
+            type: d.name,
+            properties: d.arguments,
+          })),
         };
 
         if (field.isListNullable !== undefined) {
@@ -128,6 +152,10 @@ export class AppSyncModelIntrospectionVisitor<
     return {
       name: enumObj.name,
       values: Object.values(enumObj.values),
+      fieldAttributes: Object.keys(enumObj.fieldDirectives).reduce(
+        (n, e) => ((n[e] = enumObj.fieldDirectives[e].map(d => ({ type: d.name, properties: d.arguments }))), n),
+        {} as any,
+      ),
     };
   }
 
@@ -154,7 +182,7 @@ export class AppSyncModelIntrospectionVisitor<
     return {
       isCustomPrimaryKey: primaryKeyType === CodeGenPrimaryKeyType.CustomId,
       primaryKeyFieldName: this.getFieldName(primaryKeyField),
-      sortKeyFieldNames: sortKeyFields.map(field => this.getFieldName(field))
+      sortKeyFieldNames: sortKeyFields.map(field => this.getFieldName(field)),
     };
   }
 }

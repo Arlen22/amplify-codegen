@@ -34,6 +34,8 @@ type JSONSchemaEnums = Record<string, JSONSchemaEnum>;
 type JSONSchemaEnum = {
   name: string;
   values: string[];
+  attributes?: JSONModelAttribute[];
+  fieldAttributes?: Record<string, JSONModelAttribute[]>;
 };
 type JSONModelAttributes = JSONModelAttribute[];
 type JSONModelAttribute = { type: string; properties?: Record<string, any> };
@@ -114,10 +116,7 @@ export class AppSyncJSONVisitor<
     const shouldUseModelNameFieldInHasManyAndBelongsTo = false;
     // This flag is going to be used to tight-trigger on JS implementations only.
     const shouldImputeKeyForUniDirectionalHasMany = true;
-    this.processDirectives(
-      shouldUseModelNameFieldInHasManyAndBelongsTo,
-      shouldImputeKeyForUniDirectionalHasMany
-    );
+    this.processDirectives(shouldUseModelNameFieldInHasManyAndBelongsTo, shouldImputeKeyForUniDirectionalHasMany);
 
     if (this._parsedConfig.metadataTarget === 'typescript') {
       return this.generateTypeScriptMetadata();
@@ -229,7 +228,10 @@ export class AppSyncJSONVisitor<
           isArray: field.isList,
           type: this.getType(field.type),
           isRequired: !field.isNullable,
-          attributes: [],
+          attributes: field.directives.map(d => ({
+            type: d.name,
+            properties: d.arguments,
+          })),
         };
 
         if (field.isListNullable !== undefined) {
@@ -253,6 +255,10 @@ export class AppSyncJSONVisitor<
     return {
       name: enumObj.name,
       values: Object.values(enumObj.values),
+      fieldAttributes: Object.keys(enumObj.fieldDirectives).reduce(
+        (n, e) => ((n[e] = enumObj.fieldDirectives[e].map(d => ({ type: d.name, properties: d.arguments }))), n),
+        {} as any,
+      ),
     };
   }
 

@@ -198,6 +198,8 @@ export type CodeGenEnum = {
   name: string;
   type: 'enum';
   values: CodeGenEnumValueMap;
+  directives: CodeGenDirectives;
+  fieldDirectives: Record<string, CodeGenDirectives>;
 };
 export type CodeGenModelMap = {
   [modelName: string]: CodeGenModel;
@@ -311,16 +313,23 @@ export class AppSyncModelVisitor<
       return;
     }
     const enumName = this.getEnumName(node.name.value);
-    const values = node.values
-      ? node.values.reduce((acc, val) => {
-          acc[this.getEnumValue(val.name.value)] = val.name.value;
-          return acc;
-        }, {} as any)
-      : {};
+    const directives = this.getDirectives(node.directives);
+    const [values, fieldDirectives] = node.values
+      ? node.values.reduce(
+          ([values, directives], val) => {
+            values[this.getEnumValue(val.name.value)] = val.name.value;
+            directives[val.name.value] = this.getDirectives(val.directives);
+            return [values, directives];
+          },
+          [{}, {}] as [any, any],
+        )
+      : [{}, {}];
     this.enumMap[node.name.value] = {
       name: enumName,
       type: 'enum',
       values,
+      directives,
+      fieldDirectives,
     };
   }
   processDirectives(
@@ -331,10 +340,7 @@ export class AppSyncModelVisitor<
   ) {
     if (this.config.usePipelinedTransformer || this.config.transformerVersion === 2) {
       this.processV2KeyDirectives();
-      this.processConnectionDirectivesV2(
-        shouldUseModelNameFieldInHasManyAndBelongsTo,
-        shouldImputeKeyForUniDirectionalHasMany
-      );
+      this.processConnectionDirectivesV2(shouldUseModelNameFieldInHasManyAndBelongsTo, shouldImputeKeyForUniDirectionalHasMany);
     } else {
       this.processConnectionDirective();
     }

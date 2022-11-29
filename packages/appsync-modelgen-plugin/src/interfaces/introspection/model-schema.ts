@@ -1,7 +1,7 @@
 /**
  * Root Schema Representation
  */
- export type ModelIntrospectionSchema = {
+export type ModelIntrospectionSchema = {
   version: 1;
   models: SchemaModels;
   nonModels: SchemaNonModels;
@@ -29,9 +29,11 @@ export type SchemaNonModel = {
 export type SchemaEnum = {
   name: string;
   values: string[];
+  attributes?: ModelAttribute[];
+  fieldAttributes?: Record<string, ModelAttribute[]>;
 };
 
-export type ModelAttribute = { type: string; properties?: {[key: string]: any} };
+export type ModelAttribute = { type: string; properties?: { [key: string]: any } };
 /**
  * Field Definition
  */
@@ -46,7 +48,8 @@ export type Field = {
   attributes?: FieldAttribute[];
   association?: AssociationType;
 };
-export type FieldType = 'ID'
+export type FieldType =
+  | 'ID'
   | 'String'
   | 'Int'
   | 'Float'
@@ -90,9 +93,7 @@ export type AssociationBelongsTo = AssociationBaseType & {
   connectionType: CodeGenConnectionType.BELONGS_TO;
   targetNames: string[];
 };
-export type AssociationType = AssociationHasMany
-| AssociationHasOne
-| AssociationBelongsTo;
+export type AssociationType = AssociationHasMany | AssociationHasOne | AssociationBelongsTo;
 
 export type PrimaryKeyInfo = {
   isCustomPrimaryKey: boolean;
