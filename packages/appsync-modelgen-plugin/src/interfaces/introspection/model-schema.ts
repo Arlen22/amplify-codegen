@@ -16,8 +16,8 @@ export type SchemaEnums = Record<string, SchemaEnum>;
 
 export type SchemaModel = {
   name: string;
-  attributes?: ModelAttribute[];
   fields: Fields;
+  attributes?: ModelAttribute[];
   pluralName: string;
   syncable?: boolean;
   primaryKeyInfo: PrimaryKeyInfo;
@@ -25,6 +25,7 @@ export type SchemaModel = {
 export type SchemaNonModel = {
   name: string;
   fields: Fields;
+  attributes?: ModelAttribute[];
 };
 export type SchemaEnum = {
   name: string;
@@ -41,6 +42,7 @@ export type Fields = Record<string, Field>;
 export type Field = {
   name: string;
   type: FieldType;
+  index: number;
   isArray: boolean;
   isRequired: boolean;
   isReadOnly?: boolean;

@@ -111,7 +111,6 @@ export class AppSyncModelIntrospectionVisitor<
       ...this.generateNonModelMetadata(model),
       syncable: true,
       pluralName: this.pluralizeModelName(model),
-      attributes: this.generateModelAttributes(model),
       primaryKeyInfo: this.generateModelPrimaryKeyInfo(model),
     };
   }
@@ -119,9 +118,11 @@ export class AppSyncModelIntrospectionVisitor<
   private generateNonModelMetadata(nonModel: CodeGenModel): SchemaNonModel {
     return {
       name: this.getModelName(nonModel),
-      fields: nonModel.fields.reduce((acc: Fields, field: CodeGenField) => {
+      attributes: this.generateModelAttributes(nonModel),
+      fields: nonModel.fields.reduce((acc: Fields, field: CodeGenField, index) => {
         const fieldMeta: Field = {
           name: this.getFieldName(field),
+          index,
           isArray: field.isList,
           type: this.getType(field.type),
           isRequired: !field.isNullable,
@@ -152,6 +153,10 @@ export class AppSyncModelIntrospectionVisitor<
     return {
       name: enumObj.name,
       values: Object.values(enumObj.values),
+      attributes: enumObj.directives.map(d => ({
+        type: d.name,
+        properties: d.arguments,
+      })),
       fieldAttributes: Object.keys(enumObj.fieldDirectives).reduce(
         (n, e) => ((n[e] = enumObj.fieldDirectives[e].map(d => ({ type: d.name, properties: d.arguments }))), n),
         {} as any,

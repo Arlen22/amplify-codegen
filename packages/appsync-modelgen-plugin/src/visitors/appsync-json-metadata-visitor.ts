@@ -22,6 +22,7 @@ export type JSONSchemaTypes = Record<string, JSONSchemaNonModel>;
 export type JSONSchemaNonModel = {
   name: string;
   fields: JSONModelFields;
+  attributes?: JSONModelAttributes;
 };
 type JSONSchemaModel = {
   name: string;
@@ -64,6 +65,7 @@ type JSONModelFieldType = keyof typeof METADATA_SCALAR_MAP | { model: string } |
 type JSONModelField = {
   name: string;
   type: JSONModelFieldType;
+  index: number;
   isArray: boolean;
   isRequired?: boolean;
   isArrayNullable?: boolean;
@@ -215,16 +217,17 @@ export class AppSyncJSONVisitor<
       ...this.generateNonModelMetadata(model),
       syncable: true,
       pluralName: this.pluralizeModelName(model),
-      attributes: this.generateModelAttributes(model),
     };
   }
 
   private generateNonModelMetadata(nonModel: CodeGenModel): JSONSchemaNonModel {
     return {
       name: this.getModelName(nonModel),
-      fields: nonModel.fields.reduce((acc: JSONModelFields, field: CodeGenField) => {
+      attributes: this.generateModelAttributes(nonModel),
+      fields: nonModel.fields.reduce((acc: JSONModelFields, field: CodeGenField, index) => {
         const fieldMeta: JSONModelField = {
           name: this.getFieldName(field),
+          index,
           isArray: field.isList,
           type: this.getType(field.type),
           isRequired: !field.isNullable,
@@ -255,6 +258,10 @@ export class AppSyncJSONVisitor<
     return {
       name: enumObj.name,
       values: Object.values(enumObj.values),
+      attributes: enumObj.directives.map(d => ({
+        type: d.name,
+        properties: d.arguments,
+      })),
       fieldAttributes: Object.keys(enumObj.fieldDirectives).reduce(
         (n, e) => ((n[e] = enumObj.fieldDirectives[e].map(d => ({ type: d.name, properties: d.arguments }))), n),
         {} as any,
